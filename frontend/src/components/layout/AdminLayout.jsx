@@ -1,7 +1,7 @@
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { useNotification } from '../../context/NotificationContext';
-import { FiGrid, FiUsers, FiUserCheck, FiPackage, FiShoppingCart, FiTag, FiSettings, FiLogOut, FiBell, FiChevronRight } from 'react-icons/fi';
+import { FiGrid, FiUsers, FiUserCheck, FiPackage, FiShoppingCart, FiTag, FiSettings, FiLogOut, FiBell, FiChevronRight, FiFlag } from 'react-icons/fi';
 import { useState } from 'react';
 
 const menuItems = [
@@ -11,6 +11,7 @@ const menuItems = [
     { path: '/admin/products', label: 'Sản phẩm', icon: FiPackage },
     { path: '/admin/orders', label: 'Đơn hàng', icon: FiShoppingCart },
     { path: '/admin/categories', label: 'Danh mục', icon: FiTag },
+    { path: '/admin/forum-posts', label: 'Diễn đàn', icon: FiFlag },
 ];
 
 const formatDate = (date) => {

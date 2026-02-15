@@ -34,6 +34,7 @@ import AdminProducts from './pages/admin/AdminProducts';
 import AdminOrders from './pages/admin/AdminOrders';
 import AdminCategories from './pages/admin/AdminCategories';
 import AdminNotifications from './pages/admin/AdminNotifications';
+import AdminForumPosts from './pages/admin/AdminForumPosts';
 
 import SellerOverview from './pages/seller/SellerOverview';
 import SellerProducts from './pages/seller/SellerProducts';
@@ -41,6 +42,11 @@ import SellerOrders from './pages/seller/SellerOrders';
 import SellerSettings from './pages/seller/SellerSettings';
 import SellerNotifications from './pages/seller/SellerNotifications';
 import ProductForm from './pages/seller/ProductForm';
+
+import ForumHome from './pages/forum/ForumHome';
+import ForumPostDetail from './pages/forum/ForumPostDetail';
+import CreatePost from './pages/forum/CreatePost';
+import AIChatbox from './components/common/AIChatbox';
 
 const ProtectedRoute = ({ children, requireAuth = false, requireAdmin = false, requireSeller = false }) => {
   const { user, isAdmin, isSeller, loading } = useAuth();
@@ -97,6 +103,15 @@ const App = () => {
               <Route path="/search" element={<Layout><Products /></Layout>} />
               <Route path="/category/:id" element={<Layout><Products /></Layout>} />
 
+              {/* Forum routes */}
+              <Route path="/forum" element={<Layout><ForumHome /></Layout>} />
+              <Route path="/forum/post/:id" element={<Layout><ForumPostDetail /></Layout>} />
+              <Route path="/forum/create" element={
+                <ProtectedRoute requireAuth>
+                  <Layout><CreatePost /></Layout>
+                </ProtectedRoute>
+              } />
+
               {/* Protected routes */}
               <Route path="/cart" element={
                 <ProtectedRoute requireAuth>
@@ -141,6 +156,7 @@ const App = () => {
                 <Route path="orders" element={<AdminOrders />} />
                 <Route path="categories" element={<AdminCategories />} />
                 <Route path="notifications" element={<AdminNotifications />} />
+                <Route path="forum-posts" element={<AdminForumPosts />} />
               </Route>
 
               {/* Seller routes with sidebar */}
@@ -162,6 +178,8 @@ const App = () => {
               {/* Fallback */}
               <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>
+
+            <AIChatbox />
 
             <ToastContainer
               position="top-right"

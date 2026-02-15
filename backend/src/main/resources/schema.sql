@@ -99,6 +99,10 @@ CREATE TABLE IF NOT EXISTS orders (
     status ENUM('PENDING', 'ADMIN_APPROVED', 'SELLER_CONFIRMED', 'SHIPPING', 'DELIVERED', 'CANCELLED') DEFAULT 'PENDING',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    buyer_lat DOUBLE DEFAULT NULL,
+    buyer_lng DOUBLE DEFAULT NULL,
+    seller_lat DOUBLE DEFAULT NULL,
+    seller_lng DOUBLE DEFAULT NULL,
     FOREIGN KEY (buyer_id) REFERENCES users(id) ON DELETE CASCADE,
     FOREIGN KEY (seller_id) REFERENCES users(id) ON DELETE CASCADE
 ) ENGINE=InnoDB;
@@ -131,14 +135,103 @@ CREATE TABLE IF NOT EXISTS notifications (
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 ) ENGINE=InnoDB;
 
+-- Discussion topics
+CREATE TABLE IF NOT EXISTS discussion_topics (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    title VARCHAR(255) NOT NULL UNIQUE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB;
+
+-- Forum posts
+CREATE TABLE IF NOT EXISTS forum_posts (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    title VARCHAR(500),
+    content TEXT NOT NULL,
+    author_id BIGINT NOT NULL,
+    view_count INT DEFAULT 0,
+    post_type ENUM('LONG', 'SHORT') DEFAULT 'SHORT',
+    topic_id BIGINT,
+    is_reported BOOLEAN DEFAULT FALSE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (author_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (topic_id) REFERENCES discussion_topics(id) ON DELETE SET NULL,
+    FULLTEXT INDEX idx_forum_search (title, content)
+) ENGINE=InnoDB;
+
+-- Post reactions
+CREATE TABLE IF NOT EXISTS post_reactions (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    post_id BIGINT NOT NULL,
+    user_id BIGINT NOT NULL,
+    reaction_type ENUM('LIKE', 'HEART', 'HAHA', 'WOW', 'SAD', 'ANGRY') NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (post_id) REFERENCES forum_posts(id) ON DELETE CASCADE,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    UNIQUE KEY unique_user_post_reaction (user_id, post_id)
+) ENGINE=InnoDB;
+
+-- Post tags
+CREATE TABLE IF NOT EXISTS post_tags (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    post_id BIGINT NOT NULL,
+    tag VARCHAR(100) NOT NULL,
+    FOREIGN KEY (post_id) REFERENCES forum_posts(id) ON DELETE CASCADE,
+    INDEX idx_tag (tag)
+) ENGINE=InnoDB;
+
+-- Files
+CREATE TABLE IF NOT EXISTS files (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    original_name VARCHAR(500) NOT NULL,
+    file_type VARCHAR(50) NOT NULL,
+    file_size BIGINT DEFAULT 0,
+    file_path VARCHAR(1000) NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB;
+
+-- Post files (mapping)
+CREATE TABLE IF NOT EXISTS post_files (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    post_id BIGINT NOT NULL,
+    file_id BIGINT NOT NULL,
+    FOREIGN KEY (post_id) REFERENCES forum_posts(id) ON DELETE CASCADE,
+    FOREIGN KEY (file_id) REFERENCES files(id) ON DELETE CASCADE
+) ENGINE=InnoDB;
+
+-- Comments (nested)
+CREATE TABLE IF NOT EXISTS comments (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    post_id BIGINT NOT NULL,
+    user_id BIGINT NOT NULL,
+    content TEXT NOT NULL,
+    is_liked BOOLEAN DEFAULT FALSE,
+    parent_id BIGINT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (post_id) REFERENCES forum_posts(id) ON DELETE CASCADE,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (parent_id) REFERENCES comments(id) ON DELETE CASCADE
+) ENGINE=InnoDB;
+
+-- Comment files (mapping)
+CREATE TABLE IF NOT EXISTS comment_files (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    comment_id BIGINT NOT NULL,
+    file_id BIGINT NOT NULL,
+    FOREIGN KEY (comment_id) REFERENCES comments(id) ON DELETE CASCADE,
+    FOREIGN KEY (file_id) REFERENCES files(id) ON DELETE CASCADE
+) ENGINE=InnoDB;
+
+
 -- ========== SEED DATA ==========
 
 -- Admin (pass: admin123)
-INSERT INTO users (email, password, full_name, phone, role) VALUES
+INSERT IGNORE INTO users (email, password, full_name, phone, role) VALUES
 ('admin@unimarket.com', '$2a$10$N.zmdr9k7uOCQb376NoUnuTJ8iAt6Z5EHsM8lE9lBOsl7iKTVKIUi', 'Admin UniMarket', '0901234567', 'ADMIN');
 
 -- Sellers (pass: 123456)
-INSERT INTO users (email, password, full_name, phone, address, role, is_seller, seller_approved, shop_name, shop_description) VALUES
+INSERT IGNORE INTO users (email, password, full_name, phone, address, role, is_seller, seller_approved, shop_name, shop_description) VALUES
 ('techstore@gmail.com', '$2a$10$N.zmdr9k7uOCQb376NoUnuTJ8iAt6Z5EHsM8lE9lBOsl7iKTVKIUi', 'Nguyễn Văn Tech', '0912345678', 'Hà Nội', 'SELLER', TRUE, TRUE, 'Tech Store Pro', 'Chuyên điện thoại, laptop chính hãng'),
 ('fashionista@gmail.com', '$2a$10$N.zmdr9k7uOCQb376NoUnuTJ8iAt6Z5EHsM8lE9lBOsl7iKTVKIUi', 'Trần Thị Fashion', '0923456789', 'TP.HCM', 'SELLER', TRUE, TRUE, 'Fashionista VN', 'Thời trang nam nữ hot trend'),
 ('bookworm@gmail.com', '$2a$10$N.zmdr9k7uOCQb376NoUnuTJ8iAt6Z5EHsM8lE9lBOsl7iKTVKIUi', 'Lê Minh Sách', '0934567890', 'Đà Nẵng', 'SELLER', TRUE, TRUE, 'Book Worm', 'Sách hay giá tốt'),
@@ -147,7 +240,7 @@ INSERT INTO users (email, password, full_name, phone, address, role, is_seller, 
 ('homemart@gmail.com', '$2a$10$N.zmdr9k7uOCQb376NoUnuTJ8iAt6Z5EHsM8lE9lBOsl7iKTVKIUi', 'Vũ Gia Dụng', '0967890123', 'Nha Trang', 'SELLER', TRUE, TRUE, 'Home Mart', 'Đồ gia dụng thông minh');
 
 -- Users (pass: 123456)
-INSERT INTO users (email, password, full_name, phone, address, role) VALUES
+INSERT IGNORE INTO users (email, password, full_name, phone, address, role) VALUES
 ('user1@gmail.com', '$2a$10$N.zmdr9k7uOCQb376NoUnuTJ8iAt6Z5EHsM8lE9lBOsl7iKTVKIUi', 'Nguyễn Văn An', '0978901234', 'Q1, TP.HCM', 'USER'),
 ('user2@gmail.com', '$2a$10$N.zmdr9k7uOCQb376NoUnuTJ8iAt6Z5EHsM8lE9lBOsl7iKTVKIUi', 'Trần Thị Bình', '0989012345', 'Q7, TP.HCM', 'USER'),
 ('user3@gmail.com', '$2a$10$N.zmdr9k7uOCQb376NoUnuTJ8iAt6Z5EHsM8lE9lBOsl7iKTVKIUi', 'Lê Văn Cường', '0990123456', 'Hà Nội', 'USER'),
@@ -155,7 +248,7 @@ INSERT INTO users (email, password, full_name, phone, address, role) VALUES
 ('user5@gmail.com', '$2a$10$N.zmdr9k7uOCQb376NoUnuTJ8iAt6Z5EHsM8lE9lBOsl7iKTVKIUi', 'Hoàng Văn Em', '0912345670', 'Huế', 'USER');
 
 -- Categories
-INSERT INTO categories (name, description, image) VALUES
+INSERT IGNORE INTO categories (name, description, image) VALUES
 ('Điện thoại', 'Smartphone và phụ kiện', 'https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?w=400'),
 ('Laptop', 'Laptop và máy tính', 'https://images.unsplash.com/photo-1496181133206-80ce9b88a853?w=400'),
 ('Thời trang Nam', 'Quần áo nam', 'https://images.unsplash.com/photo-1617137968427-85924c800a22?w=400'),
@@ -163,7 +256,7 @@ INSERT INTO categories (name, description, image) VALUES
 ('Sách', 'Sách và văn phòng phẩm', 'https://images.unsplash.com/photo-1524995997946-a1c2e315a42f?w=400'),
 ('Thể thao', 'Đồ thể thao', 'https://images.unsplash.com/photo-1571019614242-c5c5dee9f50b?w=400'),
 ('Mỹ phẩm', 'Skincare và makeup', 'https://images.unsplash.com/photo-1596462502278-27bfdc403348?w=400'),
-('Gia dụng', 'Đồ gia dụng', 'https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?w=400'),
+('Gia dụng', 'Đồ gia dụng', 'https://images.unsplash.com/photo-1556906781-9a412961c28c?w=400'),
 ('Đồng hồ', 'Đồng hồ thời trang', 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=400'),
 ('Phụ kiện', 'Phụ kiện điện tử', 'https://images.unsplash.com/photo-1600294037681-c80b4cb5b434?w=400');
 
@@ -231,19 +324,19 @@ INSERT INTO products (name, description, price, quantity, images, seller_id, cat
 ('Ghế Công Thái Học Herman', 'Herman Miller Aeron Full Options', 35990000, 10, 'https://images.unsplash.com/photo-1580480055273-228ff5388ef8?w=600', 7, 8, 'APPROVED', 5200),
 ('Đèn Bàn Xiaomi LED', 'Xiaomi Mi LED Desk Lamp Pro', 990000, 150, 'https://images.unsplash.com/photo-1507473885765-e6ed057f782c?w=600', 7, 8, 'APPROVED', 3600);
 
--- Orders
-INSERT INTO orders (buyer_id, seller_id, total_amount, shipping_address, phone, payment_method, status, is_paid) VALUES
-(8, 2, 34990000, '123 Nguyễn Huệ, Q1, TP.HCM', '0978901234', 'VNPAY', 'DELIVERED', TRUE),
-(8, 3, 1949000, '123 Nguyễn Huệ, Q1, TP.HCM', '0978901234', 'COD', 'DELIVERED', TRUE),
-(9, 2, 52990000, '456 Lê Lợi, Q7, TP.HCM', '0989012345', 'VNPAY', 'SHIPPING', TRUE),
-(9, 4, 376000, '456 Lê Lợi, Q7, TP.HCM', '0989012345', 'COD', 'DELIVERED', TRUE),
-(10, 5, 4480000, '789 Hoàng Diệu, Hà Nội', '0990123456', 'COD', 'SELLER_CONFIRMED', FALSE),
-(10, 6, 970000, '789 Hoàng Diệu, Hà Nội', '0990123456', 'VNPAY', 'DELIVERED', TRUE),
-(11, 7, 4990000, '321 Bạch Đằng, Đà Nẵng', '0901234560', 'COD', 'PENDING', FALSE),
-(12, 3, 3290000, '654 Trần Phú, Huế', '0912345670', 'VNPAY', 'ADMIN_APPROVED', TRUE);
+-- Orders (with tracking coordinates)
+INSERT IGNORE INTO orders (id, buyer_id, seller_id, total_amount, shipping_address, phone, payment_method, status, is_paid, buyer_lat, buyer_lng, seller_lat, seller_lng) VALUES
+(1, 8, 2, 34990000, '123 Nguyễn Huệ, Q1, TP.HCM', '0978901234', 'VNPAY', 'DELIVERED', TRUE, 10.7769, 106.7009, 10.7948, 106.6713),
+(2, 8, 3, 1949000, '123 Nguyễn Huệ, Q1, TP.HCM', '0978901234', 'COD', 'DELIVERED', TRUE, 10.7769, 106.7009, 10.7817, 106.6988),
+(3, 9, 2, 52990000, '456 Lê Lợi, Q7, TP.HCM', '0989012345', 'VNPAY', 'SHIPPING', TRUE, 10.7289, 106.7082, 10.7948, 106.6713),
+(4, 9, 4, 376000, '456 Lê Lợi, Q7, TP.HCM', '0989012345', 'COD', 'DELIVERED', TRUE, 10.7289, 106.7082, 16.0544, 108.2022),
+(5, 10, 5, 4480000, '789 Hoàng Diệu, Hà Nội', '0990123456', 'COD', 'SELLER_CONFIRMED', FALSE, 21.0285, 105.8542, 20.8449, 106.6881),
+(6, 10, 6, 970000, '789 Hoàng Diệu, Hà Nội', '0990123456', 'VNPAY', 'DELIVERED', TRUE, 21.0285, 105.8542, 10.0333, 105.7833),
+(7, 11, 7, 4990000, '321 Bạch Đằng, Đà Nẵng', '0901234560', 'COD', 'PENDING', FALSE, 16.0544, 108.2022, 12.2388, 109.1967),
+(8, 12, 3, 3290000, '654 Trần Phú, Huế', '0912345670', 'VNPAY', 'ADMIN_APPROVED', TRUE, 16.4637, 107.5909, 10.7817, 106.6988);
 
 -- Order items
-INSERT INTO order_items (order_id, product_id, product_name, product_image, price, quantity) VALUES
+INSERT IGNORE INTO order_items (order_id, product_id, product_name, product_image, price, quantity) VALUES
 (1, 1, 'iPhone 15 Pro Max 256GB', 'https://images.unsplash.com/photo-1695048133142-1a20484d2569?w=600', 34990000, 1),
 (2, 13, 'Áo Polo Nam Ralph Lauren', 'https://images.unsplash.com/photo-1625910513413-5fc330ec4de2?w=600', 1890000, 1),
 (2, 14, 'Áo Thun Oversize Unisex', 'https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?w=600', 299000, 2),
@@ -258,7 +351,7 @@ INSERT INTO order_items (order_id, product_id, product_name, product_image, pric
 (8, 21, 'Giày Sneaker Adidas', 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=600', 3290000, 1);
 
 -- Notifications
-INSERT INTO notifications (user_id, title, message, type, link, is_read) VALUES
+INSERT IGNORE INTO notifications (user_id, title, message, type, link, is_read) VALUES
 (2, 'Đơn hàng mới', 'Bạn có đơn hàng mới #1', 'ORDER', '/seller/orders/1', TRUE),
 (2, 'Đơn hàng đã giao', 'Đơn hàng #1 đã giao thành công', 'ORDER', '/seller/orders/1', TRUE),
 (3, 'Đơn hàng mới', 'Bạn có đơn hàng mới #2', 'ORDER', '/seller/orders/2', TRUE),
@@ -266,5 +359,45 @@ INSERT INTO notifications (user_id, title, message, type, link, is_read) VALUES
 (9, 'Đơn hàng đang giao', 'Đơn hàng #3 đang được vận chuyển', 'ORDER', '/orders/3', FALSE),
 (5, 'Đơn hàng mới', 'Bạn có đơn hàng mới #5', 'ORDER', '/seller/orders/5', FALSE),
 (7, 'Đơn hàng mới', 'Bạn có đơn hàng mới #7', 'ORDER', '/seller/orders/7', FALSE);
+
+-- Discussion Topics
+INSERT IGNORE INTO discussion_topics (title) VALUES
+('Công nghệ & Thủ thuật'),
+('Đánh giá sản phẩm'),
+('Chuyện vỉa hè'),
+('Hỏi đáp UniMarket');
+
+-- Forum Posts
+INSERT IGNORE INTO forum_posts (id, title, content, author_id, post_type, topic_id, view_count) VALUES
+(1, 'Đánh giá iPhone 15 Pro Max sau 3 tháng sử dụng', 'Sau 3 tháng trải nghiệm, mình thấy pin rất trâu và camera chụp đêm xuất sắc...', 8, 'LONG', 2, 1250),
+(2, 'Làm sao để săn sale hiệu quả trên UniMarket?', 'Mọi người cho mình hỏi các khung giờ săn sale của ứng dụng với ạ.', 9, 'SHORT', 4, 850),
+(3, 'Tin nóng: iPhone 16 sẽ có nút bấm mới?', 'Theo các nguồn tin rò rỉ mới nhất, iPhone 16 series sẽ trang bị nút Capture hoàn toàn mới...', 1, 'LONG', 1, 3200),
+(4, 'Cảnh báo lừa đảo qua tin nhắn lạ', 'Dạo này hay có số lạ gọi bảo trúng thưởng UniMarket, mọi người cẩn thận nhé.', 10, 'SHORT', 3, 540);
+
+-- Post Tags
+INSERT IGNORE INTO post_tags (post_id, tag) VALUES
+(1, 'iphone15'), (1, 'review'), (1, 'apple'),
+(2, 'tips'), (2, 'unimarket'),
+(3, 'iphone16'), (3, 'tech-news'),
+(4, 'security'), (4, 'warning');
+
+-- Post Reactions
+INSERT IGNORE INTO post_reactions (post_id, user_id, reaction_type) VALUES
+(1, 9, 'LIKE'), (1, 10, 'HEART'), (1, 1, 'WOW'),
+(2, 8, 'LIKE'), (2, 11, 'LIKE'),
+(3, 8, 'WOW'), (3, 9, 'HEART'), (3, 10, 'LIKE'),
+(4, 1, 'ANGRY'), (4, 11, 'SAD');
+
+-- Comments
+INSERT IGNORE INTO comments (id, post_id, user_id, content) VALUES
+(1, 1, 9, 'Bài viết rất chi tiết, cảm ơn bạn.'),
+(2, 1, 10, 'Mình cũng mới mua, công nhận camera đẹp thật.'),
+(3, 2, 1, 'Bạn nên kiểm tra vào khung giờ 0h, 12h và 20h hằng ngày nhé.'),
+(4, 4, 11, 'Vừa hôm qua mình cũng nhận được cuộc gọi tương tự.');
+
+-- Nested Comments
+INSERT IGNORE INTO comments (post_id, user_id, content, parent_id) VALUES
+(1, 8, 'Cảm ơn bạn đã ủng hộ bài viết!', 1),
+(2, 9, 'Ồ cảm ơn admin nhiều nha, mình sẽ canh thử.', 3);
 
 SELECT 'Database setup completed!' AS Status;

@@ -109,4 +109,28 @@ export const adminService = {
   approveOrder: (id) => api.put(`/admin/orders/${id}/approve`),
 };
 
+export const forumService = {
+  getPosts: (params) => api.get('/forum/posts', { params }),
+  getPost: (id) => api.get(`/forum/posts/${id}`),
+  createPost: (formData) => api.post('/forum/posts', formData, { headers: { 'Content-Type': 'multipart/form-data' } }),
+  updatePost: (id, formData) => api.put(`/forum/posts/${id}`, formData, { headers: { 'Content-Type': 'multipart/form-data' } }),
+  deletePost: (id) => api.delete(`/forum/posts/${id}`),
+  reactToPost: (id, type) => api.post(`/forum/posts/${id}/react`, null, { params: { type } }),
+  reportPost: (id) => api.post(`/forum/posts/${id}/report`),
+  getComments: (postId, params) => api.get(`/forum/posts/${postId}/comments`, { params }),
+  addComment: (postId, formData) => api.post(`/forum/posts/${postId}/comments`, formData, { headers: { 'Content-Type': 'multipart/form-data' } }),
+  deleteComment: (id) => api.delete(`/forum/comments/${id}`),
+  toggleCommentLike: (id) => api.put(`/forum/comments/${id}/like`),
+  getTopics: () => api.get('/forum/topics'),
+  createTopic: (data) => api.post('/forum/topics', data),
+  deleteTopic: (id) => api.delete(`/forum/topics/${id}`),
+  // Admin
+  getReportedPosts: (params) => api.get('/forum/admin/reported', { params }),
+  dismissReport: (id) => api.put(`/forum/admin/posts/${id}/dismiss`),
+};
+
+export const chatService = {
+  sendMessage: (message) => api.post('/chat', { message }),
+};
+
 export default api;

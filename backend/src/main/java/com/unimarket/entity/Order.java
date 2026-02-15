@@ -56,6 +56,18 @@ public class Order {
     @Column(name = "vnpay_txn_ref")
     private String vnpayTxnRef;
 
+    @Column(name = "buyer_lat")
+    private Double buyerLat;
+
+    @Column(name = "buyer_lng")
+    private Double buyerLng;
+
+    @Column(name = "seller_lat")
+    private Double sellerLat;
+
+    @Column(name = "seller_lng")
+    private Double sellerLng;
+
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
 

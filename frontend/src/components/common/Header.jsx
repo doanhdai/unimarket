@@ -46,6 +46,9 @@ const Header = () => {
                         <Link to="/products" className="text-gray-600 hover:text-indigo-600 font-medium transition-colors">
                             Sản phẩm
                         </Link>
+                        <Link to="/forum" className="text-gray-600 hover:text-indigo-600 font-medium transition-colors">
+                            Cộng đồng
+                        </Link>
                         {isSeller && (
                             <Link to="/seller/dashboard" className="text-gray-600 hover:text-indigo-600 font-medium transition-colors">
                                 Shop của tôi
@@ -186,6 +189,9 @@ const Header = () => {
                             </Link>
                             <Link to="/products" className="px-4 py-2 text-gray-600 hover:text-indigo-600 hover:bg-indigo-50 rounded-xl font-medium">
                                 Sản phẩm
+                            </Link>
+                            <Link to="/forum" className="px-4 py-2 text-gray-600 hover:text-indigo-600 hover:bg-indigo-50 rounded-xl font-medium">
+                                Cộng đồng
                             </Link>
                         </nav>
                     </div>
